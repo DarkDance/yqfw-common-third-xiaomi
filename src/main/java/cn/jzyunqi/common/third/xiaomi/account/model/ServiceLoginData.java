@@ -20,7 +20,8 @@ public class ServiceLoginData extends XiaomiRspV1 {
     @JsonProperty("_sign")
     private String sign;
 
-    private String sid;
+    @JsonProperty("sid")
+    private String serviceId;
 
     private String callback;
 

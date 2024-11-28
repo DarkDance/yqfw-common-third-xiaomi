@@ -30,8 +30,12 @@ public class XiaomiConfig {
     }
 
     @Bean
-    public XiaomiClient xiaomiClient() {
-        return new XiaomiClient();
+    public XiaomiClient xiaomiClient(WebClient.Builder webClientBuilder) {
+        WebClient webClient = webClientBuilder.clone()
+                .defaultHeader("User-Agent", userAgent)
+                .defaultCookie("deviceId", deviceId)
+                .build();
+        return new XiaomiClient(webClient);
     }
 
     @Bean
