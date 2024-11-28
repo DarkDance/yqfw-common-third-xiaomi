@@ -1,35 +1,29 @@
 package cn.jzyunqi.common.third.xiaomi.common.model;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
 /**
  * @author wiiyaya
- * @since 2018/5/22.
+ * @since 2024/11/28
  */
 @Getter
 @Setter
 @ToString
-public class XiaomiRspV1 {
+public class XiaomiRspV2<T> {
     /**
      * 结果代码
      */
     private String code;
 
     /**
-     * 结果
-     */
-    private String result;
-
-    /**
      * 结果描述
      */
-    private String description;
+    private String message;
 
     /**
-     * 结果描述
+     * 数据
      */
-    private String desc;
+    private T result;
 }

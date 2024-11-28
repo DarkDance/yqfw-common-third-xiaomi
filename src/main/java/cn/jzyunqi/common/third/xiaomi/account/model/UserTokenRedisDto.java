@@ -18,6 +18,7 @@ public class UserTokenRedisDto implements Serializable {
     private static final long serialVersionUID = 2348214333759279461L;
 
     private Long userId;
+    private String encryptedUserId;
     private String passToken;
     private Map<String, ServerTokenRedisDto> serverTokenMap;
 }

@@ -26,18 +26,33 @@ public class ServiceLoginData extends XiaomiRspV1 {
     private String callback;
 
     @JsonProperty("ssecurity")
-    private String serverSecurity;
+    private String serverSecurity;//如果没有，就在头上Extension-Pragma
 
     private String passToken;
 
-    private Long nonce;
+    private Long nonce;//如果没有，就在头上Extension-Pragma
 
     private Long userId;
 
     @JsonProperty("cUserId")
-    private String clientUserId;
+    private String encryptedUserId;
 
     @JsonProperty("psecurity")
-    private String passSecurity;
+    private String passSecurity;//如果没有，就在头上Extension-Pragma
+
+    @JsonProperty("qs")
+    private String queryStr;
+
+    private String location;
+
+    @JsonProperty("pwd")
+    private Integer hasPassword;
+
+    @JsonProperty("child")
+    private Integer isChild;
+
+    private String captchaUrl;
+
+    private Integer securityStatus;
 }
 

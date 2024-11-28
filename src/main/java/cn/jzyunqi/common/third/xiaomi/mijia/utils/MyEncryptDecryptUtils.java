@@ -20,7 +20,7 @@ public class MyEncryptDecryptUtils extends EncryptDecryptUtils {
     }
 
     @Override
-    public RequestParam prepareRquestParam(String method, String path, Map<String, String> requestParams, String security, int timeDiff) {
+    public RequestParam prepareRquestParam(String method, String path, Map<String, String> requestParams, String security, int timeDiff, String a) {
         //获取rck和算法
         String nonce = toSpecialString(timeDiff);
         String rc4Key = getRc4Key(security, nonce);
@@ -38,8 +38,7 @@ public class MyEncryptDecryptUtils extends EncryptDecryptUtils {
             String sign = DigestUtilPlus.Mac.sign(needSign.toString(), DigestUtilPlus.Base64.decodeBase64(rc4Key), DigestUtilPlus.MacAlgo.H_SHA256, true);
             //组装请求参数
             RequestParam requestParam = new RequestParam();
-            requestParam.setRequestParams(requestParams);
-            requestParam.setData(null);
+            requestParam.setData(requestParams.get("data"));
             requestParam.setSignature(sign);
             requestParam.setNonce(nonce);
             requestParam.setSecurity(security);

@@ -7,8 +7,14 @@ import cn.jzyunqi.common.third.xiaomi.account.model.ServerTokenRedisDto;
 import cn.jzyunqi.common.third.xiaomi.account.model.ServiceLoginData;
 import cn.jzyunqi.common.third.xiaomi.account.model.UserTokenRedisDto;
 import cn.jzyunqi.common.third.xiaomi.common.constant.XiaomiCache;
+import cn.jzyunqi.common.third.xiaomi.common.model.XiaomiRspV2;
+import cn.jzyunqi.common.third.xiaomi.mijia.MijiaCoreApiProxy;
+import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceData;
+import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceDataRsp;
+import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceParam;
 import cn.jzyunqi.common.utils.DigestUtilPlus;
 import cn.jzyunqi.common.utils.StringUtilPlus;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -20,6 +26,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.net.HttpCookie;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -33,6 +40,11 @@ import java.util.List;
 @Slf4j
 public class XiaomiClient {
 
+    private final WebClient webClient;
+
+    @Resource
+    private MijiaCoreApiProxy mijiaCoreApiProxy;
+
     @Resource
     private AccountApiProxy accountApiProxy;
 
@@ -42,14 +54,13 @@ public class XiaomiClient {
     @Resource
     private RedisHelper redisHelper;
 
-    @Resource
-    private WebClient webClient;
-
     public XiaomiClient(WebClient webClient) {
         this.webClient = webClient;
     }
 
     public final Account account = new Account();
+
+    public final MijiaCore mijiaCore = new MijiaCore();
 
     public class Account {
         public ServiceLoginData serviceLogin() throws BusinessException {
@@ -61,9 +72,9 @@ public class XiaomiClient {
             }
             ServiceLoginData loginData;
             try {
-                if(userTokenRedisDto.getUserId() == null){
+                if (userTokenRedisDto.getUserId() == null) {
                     loginData = accountApiProxy.serviceLogin(xiaomiClientConfig.getAccount(), serviceId);
-                }else{
+                } else {
                     loginData = accountApiProxy.serviceLogin(userTokenRedisDto.getUserId(), userTokenRedisDto.getPassToken(), serviceId);
                 }
             } catch (BusinessException e) {
@@ -77,6 +88,7 @@ public class XiaomiClient {
                 );
             }
             userTokenRedisDto.setUserId(loginData.getUserId());
+            userTokenRedisDto.setEncryptedUserId(loginData.getEncryptedUserId());
             userTokenRedisDto.setPassToken(loginData.getPassToken());
             redisHelper.vPut(XiaomiCache.THIRD_XIAOMI_ACCOUNT_V, xiaomiClientConfig.getAccount(), userTokenRedisDto);
 
@@ -114,6 +126,21 @@ public class XiaomiClient {
                 }
             }
             return loginData;
+        }
+    }
+
+    public class MijiaCore {
+        public List<DeviceData> deviceList() throws BusinessException {
+            DeviceParam deviceParam = new DeviceParam();
+            deviceParam.setGetVirtualModel(true);
+            deviceParam.setGetHuamiDevices(1);
+            deviceParam.setGetSplitDevice(true);
+            deviceParam.setSupportSmartHome(true);
+            deviceParam.setGetCariotDevice(true);
+            deviceParam.setGetThirdDevice(true);
+
+            XiaomiRspV2<DeviceDataRsp> deviceList = mijiaCoreApiProxy.deviceList("1");
+            return deviceList.getResult().getList();
         }
     }
 

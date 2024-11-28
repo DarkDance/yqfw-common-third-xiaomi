@@ -6,9 +6,9 @@ package cn.jzyunqi.common.third.xiaomi.mijia.utils;
  */
 public class Rc4Key {
 
-    private int indexMem;
+    private int _i;
 
-    private int offsetMem;
+    private int _j;
 
     private final byte[] key = new byte[256];
 
@@ -24,17 +24,17 @@ public class Rc4Key {
             this.key[j] = this.key[i];
             this.key[i] = byteJ;
         }
-        this.indexMem = 0;
-        this.offsetMem = 0;
+        this._i = 0;
+        this._j = 0;
     }
 
     public final void compute(byte[] needCompute) {
         for (int i = 0; i < needCompute.length; i++) {
-            int j = (this.indexMem + 1) & 255;
-            this.indexMem = j;
+            int j = (this._i + 1) & 255;
+            this._i = j;
             byte byteJ = this.key[j];
-            int k = (this.offsetMem + byteJ) & 255;
-            this.offsetMem = k;
+            int k = (this._j + byteJ) & 255;
+            this._j = k;
             this.key[j] = this.key[k];
             this.key[k] = byteJ;
             needCompute[i] = (byte) (needCompute[i] ^ this.key[(this.key[j] + byteJ) & 255]);

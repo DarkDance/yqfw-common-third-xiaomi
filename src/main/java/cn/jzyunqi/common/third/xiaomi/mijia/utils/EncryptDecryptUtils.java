@@ -26,9 +26,9 @@ public class EncryptDecryptUtils {
 
     //netRequest.headers.add(new KeyValuePair("MIOT-ENCRYPT-ALGORITHM", "ENCRYPT-RC4"));
     //netRequest.headers.add(new KeyValuePair("Accept-Encoding", "identity"));
-    public RequestParam prepareRquestParam(String method, String path, Map<String, String> requestParams, String security, int timeDiff) {
+    public RequestParam prepareRquestParam(String method, String path, Map<String, String> requestParams, String security, int timeDiff, String nonce) {
         //获取rck和算法
-        String nonce = toSpecialString(timeDiff);
+        //String nonce = toSpecialString(timeDiff);
         String rc4Key = getRc4Key(security, nonce);
         Rc4Algorithms rc4Algorithms = new Rc4Algorithms(rc4Key);
 
@@ -42,24 +42,22 @@ public class EncryptDecryptUtils {
 
         //组装请求参数
         RequestParam requestParam = new RequestParam();
-        requestParam.setRequestParams(signatureParams);
-        requestParam.setData(null);
+        requestParam.setData(signatureParams.get("data"));
         requestParam.setSignature(signature);
         requestParam.setNonce(nonce);
+        requestParam.setRc4Hash(signatureParams.get("rc4_hash__"));
         requestParam.setSecurity(security);
         return requestParam;
     }
 
-    private static String sign(String method, String path, Map<String, String> r2, String rc4Key) {
-        return DigestUtilPlus.SHA.sign(
-                StringUtilPlus.joinWith("&",
-                        method,
-                        URLEncoder.encode(path, StringUtilPlus.UTF_8),
-                        CollectionUtilPlus.Map.getUrlParam(r2, true, true, true),
-                        rc4Key),
-                DigestUtilPlus.SHAAlgo._1,
-                true
-        );
+    public static String sign(String method, String path, Map<String, String> requestParamMap, String rc4Key) {
+        String needSign =StringUtilPlus.joinWith(StringUtilPlus.AND,
+                method.toUpperCase(),
+                path,
+                CollectionUtilPlus.Map.getUrlParam(requestParamMap, true, true, false),
+                rc4Key);
+        System.out.println("needSign:" + needSign);
+        return DigestUtilPlus.SHA.sign(needSign, DigestUtilPlus.SHAAlgo._1, true);
     }
 
     //private static String toSpecialString(long timeDiff) {
@@ -74,20 +72,31 @@ public class EncryptDecryptUtils {
     //    return String.valueOf(DigestUtilPlus.Base64.encodeBase64String(byteArrayOutputStream.toByteArray()));
     //}
 
-    protected String getRc4Key(String security, String nonce) {
+    public String getRc4Key(String security, String nonce) {
         byte[] securityByte = DigestUtilPlus.Base64.decodeBase64(security);
         byte[] nonceByte = DigestUtilPlus.Base64.decodeBase64(nonce);
         return DigestUtilPlus.SHA.sign(join(securityByte, nonceByte), DigestUtilPlus.SHAAlgo._256, true);
     }
 
-    protected String toSpecialString(long timeDiff) {
+    public String toSpecialString(long timeDiff) {
         ByteBuffer buffer = ByteBuffer.allocate(12);
         buffer.putLong(RandomUtilPlus.Number.nextLong());
         buffer.putInt((int) ((System.currentTimeMillis() + timeDiff) / 60000));
         return String.valueOf(DigestUtilPlus.Base64.encodeBase64String(buffer.array()));
     }
 
-    protected byte[] join(byte[] bArr, byte[] bArr2) {
+    public static long[] fromSpecialString(String specialString) {
+        byte[] decodedBytes = DigestUtilPlus.Base64.decodeBase64(specialString);
+        ByteBuffer buffer = ByteBuffer.wrap(decodedBytes);
+        long randomLong = buffer.getLong();
+        int minutesSinceEpoch = buffer.getInt();
+        long timeInMillis = minutesSinceEpoch * 60000L;
+        long currentTime = System.currentTimeMillis();
+        long timeDiff = timeInMillis - currentTime;
+        return new long[]{randomLong, timeDiff};
+    }
+
+    public byte[] join(byte[] bArr, byte[] bArr2) {
         byte[] bArr3 = new byte[bArr.length + bArr2.length];
         System.arraycopy(bArr, 0, bArr3, 0, bArr.length);
         System.arraycopy(bArr2, 0, bArr3, bArr.length, bArr2.length);
