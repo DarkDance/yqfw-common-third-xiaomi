@@ -1,16 +1,15 @@
 package cn.jzyunqi.common.third.xiaomi;
 
 import cn.jzyunqi.common.feature.redis.RedisHelper;
+import cn.jzyunqi.common.third.xiaomi.account.AccountApiProxy;
 import cn.jzyunqi.common.third.xiaomi.account.model.ServerTokenRedisDto;
 import cn.jzyunqi.common.third.xiaomi.account.model.UserTokenRedisDto;
 import cn.jzyunqi.common.third.xiaomi.common.XiaomiHttpExchangeWrapper;
-import cn.jzyunqi.common.third.xiaomi.account.AccountApiProxy;
 import cn.jzyunqi.common.third.xiaomi.common.constant.XiaomiCache;
 import cn.jzyunqi.common.third.xiaomi.mijia.MijiaCoreApiProxy;
 import cn.jzyunqi.common.third.xiaomi.mijia.utils.EncryptDecryptUtils;
 import cn.jzyunqi.common.third.xiaomi.mijia.utils.Rc4Algorithms;
 import cn.jzyunqi.common.utils.CollectionUtilPlus;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -19,22 +18,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ClientHttpRequestDecorator;
-import org.springframework.http.codec.HttpMessageReader;
-import org.springframework.http.codec.HttpMessageWriter;
 import org.springframework.http.codec.json.Jackson2JsonDecoder;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.lang.NonNull;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientRequest;
-import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
-import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.support.WebClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
@@ -42,8 +33,6 @@ import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -120,9 +109,9 @@ public class XiaomiConfig {
 
                     String cookie = "cUserId=" + userToken.getEncryptedUserId() + "; yetAnotherServiceToken=" + serverToken + "; serviceToken=" + serverToken + "; timezone_id=Asia/Shanghai; timezone=GMT%2B08%3A00; is_daylight=0; dst_offset=0; channel=MI_APP_STORE; countryCode=CN; locale=zh_CN";
 
+                    //将原JSON模式的请求转换成form-data模式，并且加密数据后作为一个新的请求处理
                     ClientRequest newRequest = ClientRequest.create(clientRequest.method(), clientRequest.url())
                             .header(HttpHeaders.USER_AGENT, userAgent)
-                            //.header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded")
                             .header(HttpHeaders.COOKIE, cookie)
                             .header(HttpHeaders.ACCEPT_ENCODING, "identity")
                             .header("MIOT-ENCRYPT-ALGORITHM", "ENCRYPT-RC4")
@@ -131,14 +120,13 @@ public class XiaomiConfig {
                             .body((outputMessage, context) -> {
                                 return clientRequest.body().insert(new ClientHttpRequestDecorator(outputMessage) {
                                     @Override
-                                    public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
+                                    public @NonNull Mono<Void> writeWith(@NonNull Publisher<? extends DataBuffer> body) {
+                                        //只能在这里将请求改成form-data格式，否则body会使用这个格式来编码，导致格式错误，比如原请求为JSON格式
                                         getHeaders().setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-                                        Mono<DataBuffer> mono = DataBufferUtils.join(body).map(dataBuffer -> {
+                                        return super.writeWith(DataBufferUtils.join(body).map(dataBuffer -> {
                                             byte[] bytes = new byte[dataBuffer.readableByteCount()];
                                             dataBuffer.read(bytes);
                                             String bodyStr = new String(bytes, StandardCharsets.UTF_8);
-                                            bodyStr = bodyStr.replaceAll(" ", "");
-                                            bodyStr = bodyStr.replaceAll("\n", "");
 
                                             Map<String, String> requestParams = new TreeMap<>();
                                             requestParams.put("data", bodyStr);
@@ -154,16 +142,11 @@ public class XiaomiConfig {
                                             requestParams.put("_nonce", nonce);
                                             requestParams.put("ssecurity", serverSecurity);
 
-                                            requestParams.forEach((key, value) -> log.info("{} = {}", key, value));
-
                                             String bodyStrWithParams = CollectionUtilPlus.Map.getUrlParam(requestParams, false, true, true);
-                                            log.info("bodyStrWithParams: {}", bodyStrWithParams);
-                                            log.info("cookie: {}", cookie);
 
                                             DataBufferFactory dataBufferFactory = outputMessage.bufferFactory();
                                             return dataBufferFactory.wrap(bodyStrWithParams.getBytes(StandardCharsets.UTF_8));
-                                        });
-                                        return super.writeWith(mono);
+                                        }));
                                     }
                                 }, context);
                             })
