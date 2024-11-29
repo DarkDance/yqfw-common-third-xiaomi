@@ -1,15 +1,19 @@
 package cn.jzyunqi.common.third.xiaomi.mijia.utils;
 
-import cn.jzyunqi.common.third.xiaomi.mijia.model.RequestParam;
 import cn.jzyunqi.common.utils.CollectionUtilPlus;
 import cn.jzyunqi.common.utils.DigestUtilPlus;
+import cn.jzyunqi.common.utils.IOUtilPlus;
 import cn.jzyunqi.common.utils.RandomUtilPlus;
 import cn.jzyunqi.common.utils.StringUtilPlus;
 
-import java.net.URLEncoder;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Map;
-import java.util.TreeMap;
+import java.util.zip.GZIPInputStream;
 
 /**
  * @author wiiyaya
@@ -17,41 +21,68 @@ import java.util.TreeMap;
  */
 public class EncryptDecryptUtils {
 
-    //"GZIP".equals(headers.get("MIOT-CONTENT-ENCODING"))
-    public String decrypt(String responseBody, String security, String nonce, boolean gzipFormat) {
-        String rc4Key = getRc4Key(security, nonce);
-        Rc4Algorithms myAlgorithms = new Rc4Algorithms(rc4Key);
-        return myAlgorithms.decrypt(responseBody, gzipFormat);
+    public static String generateNonce(long timeDiff) {
+        ByteBuffer buffer = ByteBuffer.allocate(12);
+        buffer.putLong(RandomUtilPlus.Number.nextLong());
+        buffer.putInt((int) ((System.currentTimeMillis() + timeDiff) / 60000));
+        return String.valueOf(DigestUtilPlus.Base64.encodeBase64String(buffer.array()));
     }
 
-    //netRequest.headers.add(new KeyValuePair("MIOT-ENCRYPT-ALGORITHM", "ENCRYPT-RC4"));
-    //netRequest.headers.add(new KeyValuePair("Accept-Encoding", "identity"));
-    public RequestParam prepareRquestParam(String method, String path, Map<String, String> requestParams, String security, int timeDiff, String nonce) {
-        //获取rck和算法
-        //String nonce = toSpecialString(timeDiff);
+    public static String decrypt(String responseBody, String security, String nonce, boolean gzipFormat) {
+        //计算出key
+        byte[] rc4Key = DigestUtilPlus.Base64.decodeBase64(getRc4Key(security, nonce));
+        //初始化算法
+        Rc4Algorithms rc4 = new Rc4Algorithms(rc4Key);
+        rc4.compute(getEmptyBytes());//空算一次
+        //开始解密
+        byte[] decryptBytes = DigestUtilPlus.Base64.decodeBase64(responseBody);
+        rc4.compute(decryptBytes);
+        if (!gzipFormat) {
+            return new String(decryptBytes, StandardCharsets.UTF_8);
+        }
+        try (InputStream gzipInputStream = new GZIPInputStream(new ByteArrayInputStream(decryptBytes))) {
+            return IOUtilPlus.toString(gzipInputStream, StringUtilPlus.UTF_8);
+        } catch (IOException e) {
+            return responseBody;
+        }
+    }
+
+    public static void encrypt(String method, String path, Map<String, String> requestParams, String security, String nonce) {
+        //计算出key
         String rc4Key = getRc4Key(security, nonce);
-        Rc4Algorithms rc4Algorithms = new Rc4Algorithms(rc4Key);
+        byte[] rc4KeyByte = DigestUtilPlus.Base64.decodeBase64(getRc4Key(security, nonce));
+        //初始化算法
+        Rc4Algorithms rc4 = new Rc4Algorithms(rc4KeyByte);
+        rc4.compute(getEmptyBytes());//空算一次
 
         //一次签名
-        TreeMap<String, String> signatureParams = new TreeMap<>(requestParams);
-        String rc4Hash = sign(method, path, signatureParams, rc4Key);
-        signatureParams.put("rc4_hash__", rc4Hash);
-        signatureParams.replaceAll((key, value) -> rc4Algorithms.encrypt(value));
-        //二次签名
-        String signature = sign(method, path, signatureParams, rc4Key);
+        String rc4Hash = sign(method, path, requestParams, rc4Key);
+        //一次加入参数
+        requestParams.put("rc4_hash__", rc4Hash);
 
-        //组装请求参数
-        RequestParam requestParam = new RequestParam();
-        requestParam.setData(signatureParams.get("data"));
-        requestParam.setSignature(signature);
-        requestParam.setNonce(nonce);
-        requestParam.setRc4Hash(signatureParams.get("rc4_hash__"));
-        requestParam.setSecurity(security);
-        return requestParam;
+        //加密
+        requestParams.replaceAll((key, value) -> {
+            byte[] contentBytes = value.getBytes(StringUtilPlus.UTF_8);
+            rc4.compute(contentBytes);
+            return DigestUtilPlus.Base64.encodeBase64String(contentBytes);
+        });
+
+        //二次签名
+        String signature = sign(method, path, requestParams, rc4Key);
+        //二次加入参数
+        requestParams.put("signature", signature);
+        requestParams.put("_nonce", nonce);
+        requestParams.put("ssecurity", security);
     }
 
-    public static String sign(String method, String path, Map<String, String> requestParamMap, String rc4Key) {
-        String needSign =StringUtilPlus.joinWith(StringUtilPlus.AND,
+    private static byte[] getEmptyBytes() {
+        byte[] emptyBytes = new byte[1024];
+        Arrays.fill(emptyBytes, (byte) 0);
+        return emptyBytes;
+    }
+
+    private static String sign(String method, String path, Map<String, String> requestParamMap, String rc4Key) {
+        String needSign = StringUtilPlus.joinWith(StringUtilPlus.AND,
                 method.toUpperCase(),
                 path,
                 CollectionUtilPlus.Map.getUrlParam(requestParamMap, true, true, false),
@@ -59,46 +90,9 @@ public class EncryptDecryptUtils {
         return DigestUtilPlus.SHA.sign(needSign, DigestUtilPlus.SHAAlgo._1, true);
     }
 
-    //private static String toSpecialString(long timeDiff) {
-    //    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    //    DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
-    //    try {
-    //        dataOutputStream.writeLong(RandomUtilPlus.Number.nextLong());
-    //        dataOutputStream.writeInt((int) ((System.currentTimeMillis() + timeDiff) / 60000));
-    //        dataOutputStream.flush();
-    //    } catch (IOException unused) {
-    //    }
-    //    return String.valueOf(DigestUtilPlus.Base64.encodeBase64String(byteArrayOutputStream.toByteArray()));
-    //}
-
-    public String getRc4Key(String security, String nonce) {
+    private static String getRc4Key(String security, String nonce) {
         byte[] securityByte = DigestUtilPlus.Base64.decodeBase64(security);
         byte[] nonceByte = DigestUtilPlus.Base64.decodeBase64(nonce);
-        return DigestUtilPlus.SHA.sign(join(securityByte, nonceByte), DigestUtilPlus.SHAAlgo._256, true);
-    }
-
-    public String toSpecialString(long timeDiff) {
-        ByteBuffer buffer = ByteBuffer.allocate(12);
-        buffer.putLong(RandomUtilPlus.Number.nextLong());
-        buffer.putInt((int) ((System.currentTimeMillis() + timeDiff) / 60000));
-        return String.valueOf(DigestUtilPlus.Base64.encodeBase64String(buffer.array()));
-    }
-
-    public static long[] fromSpecialString(String specialString) {
-        byte[] decodedBytes = DigestUtilPlus.Base64.decodeBase64(specialString);
-        ByteBuffer buffer = ByteBuffer.wrap(decodedBytes);
-        long randomLong = buffer.getLong();
-        int minutesSinceEpoch = buffer.getInt();
-        long timeInMillis = minutesSinceEpoch * 60000L;
-        long currentTime = System.currentTimeMillis();
-        long timeDiff = timeInMillis - currentTime;
-        return new long[]{randomLong, timeDiff};
-    }
-
-    public byte[] join(byte[] bArr, byte[] bArr2) {
-        byte[] bArr3 = new byte[bArr.length + bArr2.length];
-        System.arraycopy(bArr, 0, bArr3, 0, bArr.length);
-        System.arraycopy(bArr2, 0, bArr3, bArr.length, bArr2.length);
-        return bArr3;
+        return DigestUtilPlus.SHA.sign(CollectionUtilPlus.Array.addAll(securityByte, nonceByte), DigestUtilPlus.SHAAlgo._256, true);
     }
 }

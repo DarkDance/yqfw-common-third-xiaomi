@@ -8,7 +8,6 @@ import cn.jzyunqi.common.third.xiaomi.common.XiaomiHttpExchangeWrapper;
 import cn.jzyunqi.common.third.xiaomi.common.constant.XiaomiCache;
 import cn.jzyunqi.common.third.xiaomi.mijia.MijiaCoreApiProxy;
 import cn.jzyunqi.common.third.xiaomi.mijia.utils.EncryptDecryptUtils;
-import cn.jzyunqi.common.third.xiaomi.mijia.utils.Rc4Algorithms;
 import cn.jzyunqi.common.utils.CollectionUtilPlus;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
@@ -16,7 +15,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -102,10 +100,7 @@ public class XiaomiConfig {
                     String path = clientRequest.url().getPath().replace("/app", "");
                     String serverToken = mijiaToken.getServerToken();
                     String serverSecurity = mijiaToken.getServerSecurity();
-
-                    EncryptDecryptUtils encryptDecryptUtils = new EncryptDecryptUtils();
-                    String nonce = encryptDecryptUtils.toSpecialString(300);
-                    String rc4Key = encryptDecryptUtils.getRc4Key(serverSecurity, nonce);
+                    String nonce = EncryptDecryptUtils.generateNonce(300);
 
                     String cookie = "cUserId=" + userToken.getEncryptedUserId() + "; yetAnotherServiceToken=" + serverToken + "; serviceToken=" + serverToken + "; timezone_id=Asia/Shanghai; timezone=GMT%2B08%3A00; is_daylight=0; dst_offset=0; channel=MI_APP_STORE; countryCode=CN; locale=zh_CN";
 
@@ -117,39 +112,28 @@ public class XiaomiConfig {
                             .header("MIOT-ENCRYPT-ALGORITHM", "ENCRYPT-RC4")
                             .header("X-XIAOMI-PROTOCAL-FLAG-CLI", "PROTOCAL-HTTP2")
                             .header("MIOT-ACCEPT-ENCODING", "GZIP")
-                            .body((outputMessage, context) -> {
-                                return clientRequest.body().insert(new ClientHttpRequestDecorator(outputMessage) {
-                                    @Override
-                                    public @NonNull Mono<Void> writeWith(@NonNull Publisher<? extends DataBuffer> body) {
-                                        //只能在这里将请求改成form-data格式，否则body会使用这个格式来编码，导致格式错误，比如原请求为JSON格式
-                                        getHeaders().setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-                                        return super.writeWith(DataBufferUtils.join(body).map(dataBuffer -> {
-                                            byte[] bytes = new byte[dataBuffer.readableByteCount()];
-                                            dataBuffer.read(bytes);
-                                            String bodyStr = new String(bytes, StandardCharsets.UTF_8);
+                            .body((outputMessage, context) -> clientRequest
+                                    .body()
+                                    .insert(new ClientHttpRequestDecorator(outputMessage) {
+                                        @Override
+                                        public @NonNull Mono<Void> writeWith(@NonNull Publisher<? extends DataBuffer> body) {
+                                            //只能在这里将请求改成form-data格式，否则body会使用这个格式来编码，导致格式错误，比如原请求为JSON格式
+                                            getHeaders().setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+                                            return super.writeWith(DataBufferUtils.join(body).map(dataBuffer -> {
+                                                byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                                                dataBuffer.read(bytes);
+                                                String bodyStr = new String(bytes, StandardCharsets.UTF_8);
 
-                                            Map<String, String> requestParams = new TreeMap<>();
-                                            requestParams.put("data", bodyStr);
+                                                Map<String, String> requestParams = new TreeMap<>();
+                                                requestParams.put("data", bodyStr);
 
-                                            //一次签名
-                                            Rc4Algorithms rc4Algorithms = new Rc4Algorithms(rc4Key);
-                                            String rc4Hash = EncryptDecryptUtils.sign(method, path, requestParams, rc4Key);
-                                            requestParams.put("rc4_hash__", rc4Hash);
-                                            requestParams.replaceAll((key, value) -> rc4Algorithms.encrypt(value));
-                                            //二次签名
-                                            String signature = EncryptDecryptUtils.sign(method, path, requestParams, rc4Key);
-                                            requestParams.put("signature", signature);
-                                            requestParams.put("_nonce", nonce);
-                                            requestParams.put("ssecurity", serverSecurity);
+                                                EncryptDecryptUtils.encrypt(method, path, requestParams, serverSecurity, nonce);
 
-                                            String bodyStrWithParams = CollectionUtilPlus.Map.getUrlParam(requestParams, false, true, true);
-
-                                            DataBufferFactory dataBufferFactory = outputMessage.bufferFactory();
-                                            return dataBufferFactory.wrap(bodyStrWithParams.getBytes(StandardCharsets.UTF_8));
-                                        }));
-                                    }
-                                }, context);
-                            })
+                                                String bodyStrWithParams = CollectionUtilPlus.Map.getUrlParam(requestParams, false, true, true);
+                                                return outputMessage.bufferFactory().wrap(bodyStrWithParams.getBytes(StandardCharsets.UTF_8));
+                                            }));
+                                        }
+                                    }, context))
                             .build();
                     return next.exchange(newRequest)
                             .flatMap(clientResponse -> clientResponse
@@ -160,8 +144,7 @@ public class XiaomiConfig {
                                         if (CollectionUtilPlus.Collection.isNotEmpty(gzipFormatList)) {
                                             gzipFormat = "GZIP".equals(gzipFormatList.get(0));
                                         }
-                                        Rc4Algorithms rc4Algorithms = new Rc4Algorithms(rc4Key);
-                                        String realBody = rc4Algorithms.decrypt(encryptedBody, gzipFormat);
+                                        String realBody = EncryptDecryptUtils.decrypt(encryptedBody, serverSecurity, nonce, gzipFormat);
                                         return Mono.just(clientResponse.mutate().body(realBody).build());
                                     })
                             );
