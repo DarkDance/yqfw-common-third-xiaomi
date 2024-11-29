@@ -19,10 +19,10 @@ import org.springframework.web.service.annotation.PostExchange;
  * @since 2024/9/20
  */
 @XiaomiHttpExchange
-@HttpExchange(url = "https://core.api.mijia.tech", contentType = "application/x-www-form-urlencoded")
+@HttpExchange(url = "https://core.api.mijia.tech", contentType = "application/json")
 public interface MijiaCoreApiProxy {
 
     //获取设备列表
     @PostExchange(url = "/app/v2/home/device_list_page")
-    XiaomiRspV2<DeviceDataRsp> deviceList(@RequestParam String test) throws BusinessException;
+    XiaomiRspV2<DeviceDataRsp> deviceList(@RequestBody DeviceParam deviceParam) throws BusinessException;
 }

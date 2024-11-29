@@ -56,7 +56,6 @@ public class EncryptDecryptUtils {
                 path,
                 CollectionUtilPlus.Map.getUrlParam(requestParamMap, true, true, false),
                 rc4Key);
-        System.out.println("needSign:" + needSign);
         return DigestUtilPlus.SHA.sign(needSign, DigestUtilPlus.SHAAlgo._1, true);
     }
 

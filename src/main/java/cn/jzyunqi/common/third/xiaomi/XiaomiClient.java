@@ -139,7 +139,7 @@ public class XiaomiClient {
             deviceParam.setGetCariotDevice(true);
             deviceParam.setGetThirdDevice(true);
 
-            XiaomiRspV2<DeviceDataRsp> deviceList = mijiaCoreApiProxy.deviceList("1");
+            XiaomiRspV2<DeviceDataRsp> deviceList = mijiaCoreApiProxy.deviceList(deviceParam);
             return deviceList.getResult().getList();
         }
     }

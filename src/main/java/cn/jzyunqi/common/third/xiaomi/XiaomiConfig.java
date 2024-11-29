@@ -120,33 +120,53 @@ public class XiaomiConfig {
 
                     String cookie = "cUserId=" + userToken.getEncryptedUserId() + "; yetAnotherServiceToken=" + serverToken + "; serviceToken=" + serverToken + "; timezone_id=Asia/Shanghai; timezone=GMT%2B08%3A00; is_daylight=0; dst_offset=0; channel=MI_APP_STORE; countryCode=CN; locale=zh_CN";
 
-
-                    Map<String, String> requestParams = new TreeMap<>();
-                    requestParams.put("data", "{\"getVirtualModel\":true,\"getHuamiDevices\":1,\"get_split_device\":true,\"support_smart_home\":true,\"get_cariot_device\":true,\"get_third_device\":true}");
-
-                    //一次签名
-                    Rc4Algorithms rc4Algorithms = new Rc4Algorithms(rc4Key);
-                    String rc4Hash = EncryptDecryptUtils.sign(method, path, requestParams, rc4Key);
-                    requestParams.put("rc4_hash__", rc4Hash);
-                    requestParams.replaceAll((key, value) -> rc4Algorithms.encrypt(value));
-                    //二次签名
-                    String signature = EncryptDecryptUtils.sign(method, path, requestParams, rc4Key);
-                    requestParams.put("signature", signature);
-                    requestParams.put("_nonce", nonce);
-                    requestParams.put("ssecurity", serverSecurity);
-
-                    MultiValueMap<String, String> newFormData = new LinkedMultiValueMap<>();
-                    requestParams.forEach(newFormData::add);
-
                     ClientRequest newRequest = ClientRequest.create(clientRequest.method(), clientRequest.url())
                             .header(HttpHeaders.USER_AGENT, userAgent)
-                            .header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded")
+                            //.header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded")
                             .header(HttpHeaders.COOKIE, cookie)
                             .header(HttpHeaders.ACCEPT_ENCODING, "identity")
                             .header("MIOT-ENCRYPT-ALGORITHM", "ENCRYPT-RC4")
                             .header("X-XIAOMI-PROTOCAL-FLAG-CLI", "PROTOCAL-HTTP2")
                             .header("MIOT-ACCEPT-ENCODING", "GZIP")
-                            .body(BodyInserters.fromFormData(newFormData))
+                            .body((outputMessage, context) -> {
+                                return clientRequest.body().insert(new ClientHttpRequestDecorator(outputMessage) {
+                                    @Override
+                                    public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
+                                        getHeaders().setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+                                        Mono<DataBuffer> mono = DataBufferUtils.join(body).map(dataBuffer -> {
+                                            byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                                            dataBuffer.read(bytes);
+                                            String bodyStr = new String(bytes, StandardCharsets.UTF_8);
+                                            bodyStr = bodyStr.replaceAll(" ", "");
+                                            bodyStr = bodyStr.replaceAll("\n", "");
+
+                                            Map<String, String> requestParams = new TreeMap<>();
+                                            requestParams.put("data", bodyStr);
+
+                                            //一次签名
+                                            Rc4Algorithms rc4Algorithms = new Rc4Algorithms(rc4Key);
+                                            String rc4Hash = EncryptDecryptUtils.sign(method, path, requestParams, rc4Key);
+                                            requestParams.put("rc4_hash__", rc4Hash);
+                                            requestParams.replaceAll((key, value) -> rc4Algorithms.encrypt(value));
+                                            //二次签名
+                                            String signature = EncryptDecryptUtils.sign(method, path, requestParams, rc4Key);
+                                            requestParams.put("signature", signature);
+                                            requestParams.put("_nonce", nonce);
+                                            requestParams.put("ssecurity", serverSecurity);
+
+                                            requestParams.forEach((key, value) -> log.info("{} = {}", key, value));
+
+                                            String bodyStrWithParams = CollectionUtilPlus.Map.getUrlParam(requestParams, false, true, true);
+                                            log.info("bodyStrWithParams: {}", bodyStrWithParams);
+                                            log.info("cookie: {}", cookie);
+
+                                            DataBufferFactory dataBufferFactory = outputMessage.bufferFactory();
+                                            return dataBufferFactory.wrap(bodyStrWithParams.getBytes(StandardCharsets.UTF_8));
+                                        });
+                                        return super.writeWith(mono);
+                                    }
+                                }, context);
+                            })
                             .build();
                     return next.exchange(newRequest)
                             .flatMap(clientResponse -> clientResponse
@@ -157,8 +177,8 @@ public class XiaomiConfig {
                                         if (CollectionUtilPlus.Collection.isNotEmpty(gzipFormatList)) {
                                             gzipFormat = "GZIP".equals(gzipFormatList.get(0));
                                         }
-                                        Rc4Algorithms rc4Algorithms1 = new Rc4Algorithms(rc4Key);
-                                        String realBody = rc4Algorithms1.decrypt(encryptedBody, gzipFormat);
+                                        Rc4Algorithms rc4Algorithms = new Rc4Algorithms(rc4Key);
+                                        String realBody = rc4Algorithms.decrypt(encryptedBody, gzipFormat);
                                         return Mono.just(clientResponse.mutate().body(realBody).build());
                                     })
                             );

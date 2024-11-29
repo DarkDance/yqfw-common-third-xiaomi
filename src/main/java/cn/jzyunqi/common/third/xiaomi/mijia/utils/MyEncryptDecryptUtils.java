@@ -14,12 +14,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MyEncryptDecryptUtils extends EncryptDecryptUtils {
 
-    @Override
     public final String decrypt(String responseBody, String security, String nonce, boolean gzipFormat) {
         return responseBody;
     }
 
-    @Override
     public RequestParam prepareRquestParam(String method, String path, Map<String, String> requestParams, String security, int timeDiff, String a) {
         //获取rck和算法
         String nonce = toSpecialString(timeDiff);
