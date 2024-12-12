@@ -6,6 +6,7 @@ import cn.jzyunqi.common.third.xiaomi.account.model.ServerTokenRedisDto;
 import cn.jzyunqi.common.third.xiaomi.account.model.UserTokenRedisDto;
 import cn.jzyunqi.common.third.xiaomi.common.XiaomiHttpExchangeWrapper;
 import cn.jzyunqi.common.third.xiaomi.common.constant.XiaomiCache;
+import cn.jzyunqi.common.third.xiaomi.mijia.MijiaApiProxy;
 import cn.jzyunqi.common.third.xiaomi.mijia.MijiaCoreApiProxy;
 import cn.jzyunqi.common.third.xiaomi.mijia.utils.EncryptDecryptUtils;
 import cn.jzyunqi.common.utils.CollectionUtilPlus;
@@ -154,5 +155,80 @@ public class XiaomiConfig {
         webClientAdapter.setBlockTimeout(Duration.ofSeconds(5));
         HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(webClientAdapter).build();
         return factory.createClient(MijiaCoreApiProxy.class);
+    }
+
+    @Bean
+    public MijiaApiProxy mijiaApiProxy(WebClient.Builder webClientBuilder, XiaomiClientConfig xiaomiClientConfig, RedisHelper redisHelper, Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder) {
+        WebClient webClient = webClientBuilder.clone()
+                .codecs(configurer -> configurer
+                        .defaultCodecs()
+                        .jackson2JsonDecoder(new Jackson2JsonDecoder(jackson2ObjectMapperBuilder.build(),
+                                MediaType.APPLICATION_JSON,
+                                new MediaType("application", "*+json"),
+                                MediaType.APPLICATION_NDJSON,
+                                MediaType.TEXT_PLAIN
+                        )))
+                .filter((clientRequest, next) -> {
+                    UserTokenRedisDto userToken = (UserTokenRedisDto) redisHelper.vGet(XiaomiCache.THIRD_XIAOMI_ACCOUNT_V, xiaomiClientConfig.getAccount());
+                    ServerTokenRedisDto mijiaToken = userToken.getServerTokenMap().get("mijia");
+
+                    String method = clientRequest.method().toString();
+                    String path = clientRequest.url().getPath().replace("/app", "");
+                    String serverToken = mijiaToken.getServerToken();
+                    String serverSecurity = mijiaToken.getServerSecurity();
+                    String nonce = EncryptDecryptUtils.generateNonce(300);
+
+                    String cookie = "cUserId=" + userToken.getEncryptedUserId() + "; yetAnotherServiceToken=" + serverToken + "; serviceToken=" + serverToken + "; timezone_id=Asia/Shanghai; timezone=GMT%2B08%3A00; is_daylight=0; dst_offset=0; channel=MI_APP_STORE; countryCode=CN; locale=zh_CN";
+
+                    //将原JSON模式的请求转换成form-data模式，并且加密数据后作为一个新的请求处理
+                    ClientRequest newRequest = ClientRequest.create(clientRequest.method(), clientRequest.url())
+                            .header(HttpHeaders.USER_AGENT, userAgent)
+                            .header(HttpHeaders.COOKIE, cookie)
+                            .header(HttpHeaders.ACCEPT_ENCODING, "identity")
+                            .header("MIOT-ENCRYPT-ALGORITHM", "ENCRYPT-RC4")
+                            .header("X-XIAOMI-PROTOCAL-FLAG-CLI", "PROTOCAL-HTTP2")
+                            .header("MIOT-ACCEPT-ENCODING", "GZIP")
+                            .body((outputMessage, context) -> clientRequest
+                                    .body()
+                                    .insert(new ClientHttpRequestDecorator(outputMessage) {
+                                        @Override
+                                        public @NonNull Mono<Void> writeWith(@NonNull Publisher<? extends DataBuffer> body) {
+                                            //只能在这里将请求改成form-data格式，否则body会使用这个格式来编码，导致格式错误，比如原请求为JSON格式
+                                            getHeaders().setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+                                            return super.writeWith(DataBufferUtils.join(body).map(dataBuffer -> {
+                                                byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                                                dataBuffer.read(bytes);
+                                                String bodyStr = new String(bytes, StandardCharsets.UTF_8);
+
+                                                Map<String, String> requestParams = new TreeMap<>();
+                                                requestParams.put("data", bodyStr);
+
+                                                EncryptDecryptUtils.encrypt(method, path, requestParams, serverSecurity, nonce);
+
+                                                String bodyStrWithParams = CollectionUtilPlus.Map.getUrlParam(requestParams, false, true, true);
+                                                return outputMessage.bufferFactory().wrap(bodyStrWithParams.getBytes(StandardCharsets.UTF_8));
+                                            }));
+                                        }
+                                    }, context))
+                            .build();
+                    return next.exchange(newRequest)
+                            .flatMap(clientResponse -> clientResponse
+                                    .bodyToMono(String.class)
+                                    .flatMap(encryptedBody -> {
+                                        List<String> gzipFormatList = clientResponse.headers().header("MIOT-CONTENT-ENCODING");
+                                        boolean gzipFormat = false;
+                                        if (CollectionUtilPlus.Collection.isNotEmpty(gzipFormatList)) {
+                                            gzipFormat = "GZIP".equals(gzipFormatList.get(0));
+                                        }
+                                        String realBody = EncryptDecryptUtils.decrypt(encryptedBody, serverSecurity, nonce, gzipFormat);
+                                        return Mono.just(clientResponse.mutate().body(realBody).build());
+                                    })
+                            );
+                })
+                .build();
+        WebClientAdapter webClientAdapter = WebClientAdapter.create(webClient);
+        webClientAdapter.setBlockTimeout(Duration.ofSeconds(5));
+        HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(webClientAdapter).build();
+        return factory.createClient(MijiaApiProxy.class);
     }
 }

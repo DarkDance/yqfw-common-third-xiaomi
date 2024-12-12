@@ -10,7 +10,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum MiServer {
-    mijia("mijia", "https://account.xiaomi.com"),
+    mijia("mijia", "https://sts.api.mijia.tech/mijia/sts"),
     xiaoqiang("xiaoqiang", "https://api.miwifi.com/sts"),
     xiaomihome("xiaomihome", "https://home.mi.com/sts"),
     tsm_auth("tsm-auth", "https://tsmapi.pay.xiaomi.com/sts"),
@@ -20,6 +20,8 @@ public enum MiServer {
     mi_eshopm_go("mi_eshopm_go", "https://m.mi.com/v1/authorize/sso_callback"),
     kfs_chat("kfs_chat", "https://chat.kefu.mi.com/sts"),
     i_ai_mi_com("i.ai.mi.com", "https://i.ai.mi.com/sts"),
+    xiaomiio("xiaomiio", "https://api.io.mi.com/sts"),
+    micoapi("micoapi", "https://api2.mina.mi.com/sts"),
     ;
     private final String serviceId;
     private final String urlRemark;

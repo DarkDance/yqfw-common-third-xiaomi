@@ -3,22 +3,22 @@ package cn.jzyunqi.common.third.xiaomi;
 import cn.jzyunqi.common.exception.BusinessException;
 import cn.jzyunqi.common.feature.redis.RedisHelper;
 import cn.jzyunqi.common.third.xiaomi.account.AccountApiProxy;
+import cn.jzyunqi.common.third.xiaomi.account.enums.MiServer;
 import cn.jzyunqi.common.third.xiaomi.account.model.ServerTokenRedisDto;
 import cn.jzyunqi.common.third.xiaomi.account.model.ServiceLoginData;
 import cn.jzyunqi.common.third.xiaomi.account.model.UserTokenRedisDto;
 import cn.jzyunqi.common.third.xiaomi.common.constant.XiaomiCache;
 import cn.jzyunqi.common.third.xiaomi.common.model.XiaomiRspV2;
+import cn.jzyunqi.common.third.xiaomi.mijia.MijiaApiProxy;
 import cn.jzyunqi.common.third.xiaomi.mijia.MijiaCoreApiProxy;
 import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceData;
 import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceDataRsp;
 import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceParam;
+import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceSearchParam;
 import cn.jzyunqi.common.utils.DigestUtilPlus;
 import cn.jzyunqi.common.utils.StringUtilPlus;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -30,6 +30,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 公众号客户端
@@ -41,6 +44,9 @@ import java.util.List;
 public class XiaomiClient {
 
     private final WebClient webClient;
+
+    @Resource
+    private MijiaApiProxy mijiaApiProxy;
 
     @Resource
     private MijiaCoreApiProxy mijiaCoreApiProxy;
@@ -64,7 +70,7 @@ public class XiaomiClient {
 
     public class Account {
         public ServiceLoginData serviceLogin() throws BusinessException {
-            String serviceId = "mijia";
+            String serviceId = MiServer.mijia.getServiceId();
             UserTokenRedisDto userTokenRedisDto = (UserTokenRedisDto) redisHelper.vGet(XiaomiCache.THIRD_XIAOMI_ACCOUNT_V, xiaomiClientConfig.getAccount());
             if (userTokenRedisDto == null) {
                 userTokenRedisDto = new UserTokenRedisDto();
@@ -130,17 +136,43 @@ public class XiaomiClient {
     }
 
     public class MijiaCore {
-        public List<DeviceData> deviceList() throws BusinessException {
-            DeviceParam deviceParam = new DeviceParam();
-            deviceParam.setGetVirtualModel(true);
-            deviceParam.setGetHuamiDevices(1);
-            deviceParam.setGetSplitDevice(true);
-            deviceParam.setSupportSmartHome(true);
-            deviceParam.setGetCariotDevice(true);
-            deviceParam.setGetThirdDevice(true);
+        private static final AtomicInteger id = new AtomicInteger();
 
-            XiaomiRspV2<DeviceDataRsp> deviceList = mijiaCoreApiProxy.deviceList(deviceParam);
+        public List<DeviceData> deviceList() throws BusinessException {
+            DeviceSearchParam deviceSearchParam = new DeviceSearchParam();
+            deviceSearchParam.setGetVirtualModel(true);
+            deviceSearchParam.setGetHuamiDevices(1);
+            deviceSearchParam.setGetSplitDevice(true);
+            deviceSearchParam.setSupportSmartHome(true);
+            deviceSearchParam.setGetCariotDevice(true);
+            deviceSearchParam.setGetThirdDevice(true);
+
+            XiaomiRspV2<DeviceDataRsp> deviceList = mijiaCoreApiProxy.deviceList(deviceSearchParam);
             return deviceList.getResult().getList();
+        }
+
+        public Map<String, String> getDeviceStatus(String deviceId) throws BusinessException {
+            DeviceParam deviceParam = new DeviceParam();
+            deviceParam.setId(id.get());
+            deviceParam.setMethod("get_prop");
+            List<String> statusList = new ArrayList<>();
+            statusList.add("ai_env");
+            statusList.add("ai_provider");
+            statusList.add("bright");
+            statusList.add("microphone_mute");
+            statusList.add("speaker_mute");
+            statusList.add("speaker_rate");
+            statusList.add("speaker_volume");
+
+            deviceParam.setParams(statusList);
+
+            XiaomiRspV2<List<String>> deviceList = mijiaApiProxy.getDeviceStatus("yeelink.wifispeaker.v1", deviceId, deviceParam);
+
+            Map<String, String> resultMap = new TreeMap<>();
+            for (int i = 0; i < statusList.size(); i++) {
+                resultMap.put(statusList.get(i), deviceList.getResult().get(i));
+            }
+            return resultMap;
         }
     }
 
