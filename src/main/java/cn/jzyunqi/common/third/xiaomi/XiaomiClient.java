@@ -157,7 +157,7 @@ public class XiaomiClient {
     public class MijiaApi {
         private static final AtomicInteger id = new AtomicInteger();
 
-        public Map<String, String> getDeviceStatus(String deviceId) throws BusinessException {
+        public Map<String, String> getDeviceStatus(String deviceId, String deviceModel) throws BusinessException {
             DeviceStatusParam deviceParam = new DeviceStatusParam();
             deviceParam.setId(id.get());
             deviceParam.setMethod("get_prop");
@@ -172,7 +172,7 @@ public class XiaomiClient {
 
             deviceParam.setParams(statusList);
 
-            XiaomiRspV2<List<String>> deviceList = mijiaApiProxy.getDeviceStatus("yeelink.wifispeaker.v1", deviceId, deviceParam);
+            XiaomiRspV2<List<String>> deviceList = mijiaApiProxy.getDeviceStatus(deviceModel, deviceId, deviceParam);
 
             Map<String, String> resultMap = new TreeMap<>();
             for (int i = 0; i < statusList.size(); i++) {
@@ -181,17 +181,17 @@ public class XiaomiClient {
             return resultMap;
         }
 
-        public DeviceChatData getDeviceChatList(String deviceId) throws BusinessException {
+        public DeviceChatData getDeviceChatList(String userId, String deviceId, String deviceModel, String clientId) throws BusinessException {
             DeviceChatParam deviceChatParam = new DeviceChatParam();
             deviceChatParam.setPath("/api/aivs/device-events");
             deviceChatParam.setMethod("POST");
             deviceChatParam.setEnv(0);
 
             DeviceChatParam.DefaultParams defaultParams = new DeviceChatParam.DefaultParams();
-            defaultParams.setUserId("2997959910");
-            defaultParams.setModel("yeelink.wifispeaker.v1");
+            defaultParams.setUserId(userId);
+            defaultParams.setModel(deviceModel);
             defaultParams.setDid(deviceId);
-            defaultParams.setClientId("255007805231073280");
+            defaultParams.setClientId(clientId);
             deviceChatParam.setParams(defaultParams);
 
             DeviceChatParam.SpecialParams specialParams = new DeviceChatParam.SpecialParams();
@@ -207,7 +207,7 @@ public class XiaomiClient {
             specialHeader.setContentType(List.of("application/json"));
             deviceChatParam.setReqHeader(specialHeader);
 
-            XiaomiRspV2<DeviceChatRsp> deviceList = mijiaApiProxy.getDeviceChatList("yeelink.wifispeaker.v1", deviceChatParam);
+            XiaomiRspV2<DeviceChatRsp> deviceList = mijiaApiProxy.getDeviceChatList(deviceModel, deviceChatParam);
             return deviceList.getResult().getRet();
         }
     }
