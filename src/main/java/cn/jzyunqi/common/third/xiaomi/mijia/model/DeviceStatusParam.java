@@ -16,5 +16,5 @@ import java.util.List;
 public class DeviceStatusParam {
     private Integer id;
     private String method;
-    private List<String> params;
+    private List<Object> params;
 }

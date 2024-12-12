@@ -34,6 +34,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -161,7 +162,7 @@ public class XiaomiClient {
             DeviceStatusParam deviceParam = new DeviceStatusParam();
             deviceParam.setId(id.get());
             deviceParam.setMethod("get_prop");
-            List<String> statusList = new ArrayList<>();
+            List<Object> statusList = new ArrayList<>();
             statusList.add("ai_env");
             statusList.add("ai_provider");
             statusList.add("bright");
@@ -172,13 +173,27 @@ public class XiaomiClient {
 
             deviceParam.setParams(statusList);
 
-            XiaomiRspV2<List<String>> deviceList = mijiaApiProxy.getDeviceStatus(deviceModel, deviceId, deviceParam);
+            XiaomiRspV2<List<String>> deviceList = mijiaApiProxy.executeDeviceMethod(deviceModel, deviceId, deviceParam);
 
             Map<String, String> resultMap = new TreeMap<>();
             for (int i = 0; i < statusList.size(); i++) {
-                resultMap.put(statusList.get(i), deviceList.getResult().get(i));
+                resultMap.put(statusList.get(i).toString(), deviceList.getResult().get(i));
             }
             return resultMap;
+        }
+
+        public String chatWithDevice(String deviceId, String deviceModel, String chatContent) throws BusinessException {
+            DeviceStatusParam deviceParam = new DeviceStatusParam();
+            deviceParam.setId(id.get());
+            deviceParam.setMethod("start_user_nlp");
+            List<Object> statusList = new ArrayList<>();
+            statusList.add(chatContent);
+            statusList.add(0);
+
+            deviceParam.setParams(statusList);
+
+            XiaomiRspV2<List<String>> deviceList = mijiaApiProxy.executeDeviceMethod(deviceModel, deviceId, deviceParam);
+            return deviceList.getResult().get(0);
         }
 
         public DeviceChatData getDeviceChatList(String userId, String deviceId, String deviceModel, String clientId) throws BusinessException {

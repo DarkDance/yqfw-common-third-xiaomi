@@ -26,7 +26,7 @@ public interface MijiaApiProxy {
 
     //获取设备状态
     @PostExchange(url = "/app/home/rpc/{deviceId}")
-    XiaomiRspV2<List<String>> getDeviceStatus(@RequestHeader("miot-request-model") String model, @PathVariable String deviceId, @RequestBody DeviceStatusParam deviceStatusParam) throws BusinessException;
+    XiaomiRspV2<List<String>> executeDeviceMethod(@RequestHeader("miot-request-model") String model, @PathVariable String deviceId, @RequestBody DeviceStatusParam deviceStatusParam) throws BusinessException;
 
     //获取设备对话列表
     @PostExchange(url = "/app/v2/api/aivs")
