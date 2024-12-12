@@ -11,10 +11,13 @@ import cn.jzyunqi.common.third.xiaomi.common.constant.XiaomiCache;
 import cn.jzyunqi.common.third.xiaomi.common.model.XiaomiRspV2;
 import cn.jzyunqi.common.third.xiaomi.mijia.MijiaApiProxy;
 import cn.jzyunqi.common.third.xiaomi.mijia.MijiaCoreApiProxy;
+import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceChatData;
+import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceChatParam;
+import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceChatRsp;
 import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceData;
 import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceDataRsp;
-import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceParam;
 import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceSearchParam;
+import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceStatusParam;
 import cn.jzyunqi.common.utils.DigestUtilPlus;
 import cn.jzyunqi.common.utils.StringUtilPlus;
 import jakarta.annotation.Resource;
@@ -66,7 +69,8 @@ public class XiaomiClient {
 
     public final Account account = new Account();
 
-    public final MijiaCore mijiaCore = new MijiaCore();
+    public final MijiaCoreApi mijiaCoreApi = new MijiaCoreApi();
+    public final MijiaApi mijiaApi = new MijiaApi();
 
     public class Account {
         public ServiceLoginData serviceLogin() throws BusinessException {
@@ -135,9 +139,7 @@ public class XiaomiClient {
         }
     }
 
-    public class MijiaCore {
-        private static final AtomicInteger id = new AtomicInteger();
-
+    public class MijiaCoreApi {
         public List<DeviceData> deviceList() throws BusinessException {
             DeviceSearchParam deviceSearchParam = new DeviceSearchParam();
             deviceSearchParam.setGetVirtualModel(true);
@@ -150,9 +152,13 @@ public class XiaomiClient {
             XiaomiRspV2<DeviceDataRsp> deviceList = mijiaCoreApiProxy.deviceList(deviceSearchParam);
             return deviceList.getResult().getList();
         }
+    }
+
+    public class MijiaApi {
+        private static final AtomicInteger id = new AtomicInteger();
 
         public Map<String, String> getDeviceStatus(String deviceId) throws BusinessException {
-            DeviceParam deviceParam = new DeviceParam();
+            DeviceStatusParam deviceParam = new DeviceStatusParam();
             deviceParam.setId(id.get());
             deviceParam.setMethod("get_prop");
             List<String> statusList = new ArrayList<>();
@@ -173,6 +179,36 @@ public class XiaomiClient {
                 resultMap.put(statusList.get(i), deviceList.getResult().get(i));
             }
             return resultMap;
+        }
+
+        public DeviceChatData getDeviceChatList(String deviceId) throws BusinessException {
+            DeviceChatParam deviceChatParam = new DeviceChatParam();
+            deviceChatParam.setPath("/api/aivs/device-events");
+            deviceChatParam.setMethod("POST");
+            deviceChatParam.setEnv(0);
+
+            DeviceChatParam.DefaultParams defaultParams = new DeviceChatParam.DefaultParams();
+            defaultParams.setUserId("2997959910");
+            defaultParams.setModel("yeelink.wifispeaker.v1");
+            defaultParams.setDid(deviceId);
+            defaultParams.setClientId("255007805231073280");
+            deviceChatParam.setParams(defaultParams);
+
+            DeviceChatParam.SpecialParams specialParams = new DeviceChatParam.SpecialParams();
+            specialParams.setStart(System.currentTimeMillis());
+            specialParams.setPageSize(2);
+            deviceChatParam.setPayload(specialParams);
+
+            DeviceChatParam.DefaultHeader defaultHeader = new DeviceChatParam.DefaultHeader();
+            defaultHeader.setName("DialogRecord.FetchByTime");
+            deviceChatParam.setHeader(defaultHeader);
+
+            DeviceChatParam.SpecialHeader specialHeader = new DeviceChatParam.SpecialHeader();
+            specialHeader.setContentType(List.of("application/json"));
+            deviceChatParam.setReqHeader(specialHeader);
+
+            XiaomiRspV2<DeviceChatRsp> deviceList = mijiaApiProxy.getDeviceChatList("yeelink.wifispeaker.v1", deviceChatParam);
+            return deviceList.getResult().getRet();
         }
     }
 

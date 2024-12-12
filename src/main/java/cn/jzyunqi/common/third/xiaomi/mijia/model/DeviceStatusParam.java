@@ -13,7 +13,7 @@ import java.util.List;
 @Getter
 @Setter
 @ToString
-public class DeviceParam {
+public class DeviceStatusParam {
     private Integer id;
     private String method;
     private List<String> params;
