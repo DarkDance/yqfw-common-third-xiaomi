@@ -11,6 +11,7 @@ import cn.jzyunqi.common.third.xiaomi.common.constant.XiaomiCache;
 import cn.jzyunqi.common.third.xiaomi.common.model.XiaomiRspV2;
 import cn.jzyunqi.common.third.xiaomi.mijia.MijiaApiProxy;
 import cn.jzyunqi.common.third.xiaomi.mijia.MijiaCoreApiProxy;
+import cn.jzyunqi.common.third.xiaomi.mijia.enums.YeelightProp;
 import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceChatData;
 import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceChatParam;
 import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceChatRsp;
@@ -180,6 +181,20 @@ public class XiaomiClient {
                 resultMap.put(statusList.get(i).toString(), deviceList.getResult().get(i));
             }
             return resultMap;
+        }
+
+        public String setDeviceStatus(String deviceId, String deviceModel, YeelightProp methodName, String value) throws BusinessException {
+            DeviceStatusParam deviceParam = new DeviceStatusParam();
+            deviceParam.setId(id.get());
+            deviceParam.setMethod("set_" + methodName);
+            List<Object> statusList = new ArrayList<>();
+            statusList.add(value);
+
+            deviceParam.setParams(statusList);
+
+            XiaomiRspV2<List<String>> deviceList = mijiaApiProxy.executeDeviceMethod(deviceModel, deviceId, deviceParam);
+
+            return deviceList.getResult().get(0);
         }
 
         public String chatWithDevice(String deviceId, String deviceModel, String chatContent) throws BusinessException {
