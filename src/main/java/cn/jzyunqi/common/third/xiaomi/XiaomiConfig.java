@@ -6,7 +6,7 @@ import cn.jzyunqi.common.third.xiaomi.account.model.ServerTokenRedisDto;
 import cn.jzyunqi.common.third.xiaomi.account.model.UserTokenRedisDto;
 import cn.jzyunqi.common.third.xiaomi.common.XiaomiHttpExchangeWrapper;
 import cn.jzyunqi.common.third.xiaomi.common.constant.XiaomiCache;
-import cn.jzyunqi.common.third.xiaomi.mijia.MijiaCoreApiProxy;
+import cn.jzyunqi.common.third.xiaomi.mijia.MijiaApiProxy;
 import cn.jzyunqi.common.third.xiaomi.mijia.utils.EncryptDecryptUtils;
 import cn.jzyunqi.common.utils.CollectionUtilPlus;
 import lombok.extern.slf4j.Slf4j;
@@ -82,7 +82,7 @@ public class XiaomiConfig {
     }
 
     @Bean
-    public MijiaCoreApiProxy mijiaCoreApiProxy(WebClient.Builder webClientBuilder, XiaomiClientConfig xiaomiClientConfig, RedisHelper redisHelper, Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder) {
+    public MijiaApiProxy mijiaApiProxy(WebClient.Builder webClientBuilder, XiaomiClientConfig xiaomiClientConfig, RedisHelper redisHelper, Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder) {
         WebClient webClient = webClientBuilder.clone()
                 .codecs(configurer -> configurer
                         .defaultCodecs()
@@ -153,6 +153,6 @@ public class XiaomiConfig {
         WebClientAdapter webClientAdapter = WebClientAdapter.create(webClient);
         webClientAdapter.setBlockTimeout(Duration.ofSeconds(5));
         HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(webClientAdapter).build();
-        return factory.createClient(MijiaCoreApiProxy.class);
+        return factory.createClient(MijiaApiProxy.class);
     }
 }

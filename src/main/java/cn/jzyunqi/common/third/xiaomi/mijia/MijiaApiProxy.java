@@ -23,18 +23,18 @@ import java.util.List;
  * @since 2024/9/20
  */
 @XiaomiHttpExchange
-@HttpExchange(url = "https://{prefix}api.mijia.tech", contentType = "application/json")
-public interface MijiaCoreApiProxy {
+@HttpExchange(contentType = "application/json")
+public interface MijiaApiProxy {
 
     //获取设备列表
-    @PostExchange(url = "/app/v2/home/device_list_page")
-    XiaomiRspV2<DeviceDataRsp> deviceList(@PathVariable String prefix, @RequestBody DeviceSearchParam deviceSearchParam) throws BusinessException;
+    @PostExchange(url = "https://core.api.mijia.tech/app/v2/home/device_list_page")
+    XiaomiRspV2<DeviceDataRsp> deviceList(@RequestBody DeviceSearchParam deviceSearchParam) throws BusinessException;
 
     //获取设备状态
-    @PostExchange(url = "/app/home/rpc/{deviceId}")
-    XiaomiRspV2<List<String>> executeDeviceMethod(@PathVariable String prefix, @RequestHeader("miot-request-model") String model, @PathVariable String deviceId, @RequestBody DeviceStatusParam deviceStatusParam) throws BusinessException;
+    @PostExchange(url = "https://api.mijia.tech/app/home/rpc/{deviceId}")
+    XiaomiRspV2<List<String>> executeDeviceMethod(@RequestHeader("miot-request-model") String model, @PathVariable String deviceId, @RequestBody DeviceStatusParam deviceStatusParam) throws BusinessException;
 
     //获取设备对话列表
-    @PostExchange(url = "/app/v2/api/aivs")
-    XiaomiRspV2<DeviceChatRsp> getDeviceChatList(@PathVariable String prefix, @RequestHeader("miot-request-model") String model, @RequestBody DeviceChatParam deviceChatParam) throws BusinessException;
+    @PostExchange(url = "https://api.mijia.tech/app/v2/api/aivs")
+    XiaomiRspV2<DeviceChatRsp> getDeviceChatList(@RequestHeader("miot-request-model") String model, @RequestBody DeviceChatParam deviceChatParam) throws BusinessException;
 }

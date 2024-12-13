@@ -9,7 +9,7 @@ import cn.jzyunqi.common.third.xiaomi.account.model.ServiceLoginData;
 import cn.jzyunqi.common.third.xiaomi.account.model.UserTokenRedisDto;
 import cn.jzyunqi.common.third.xiaomi.common.constant.XiaomiCache;
 import cn.jzyunqi.common.third.xiaomi.common.model.XiaomiRspV2;
-import cn.jzyunqi.common.third.xiaomi.mijia.MijiaCoreApiProxy;
+import cn.jzyunqi.common.third.xiaomi.mijia.MijiaApiProxy;
 import cn.jzyunqi.common.third.xiaomi.mijia.enums.YeelightProp;
 import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceChatData;
 import cn.jzyunqi.common.third.xiaomi.mijia.model.DeviceChatParam;
@@ -49,7 +49,7 @@ public class XiaomiClient {
     private final WebClient webClient;
 
     @Resource
-    private MijiaCoreApiProxy mijiaCoreApiProxy;
+    private MijiaApiProxy mijiaCoreApiProxy;
 
     @Resource
     private AccountApiProxy accountApiProxy;
@@ -66,7 +66,7 @@ public class XiaomiClient {
 
     public final Account account = new Account();
 
-    public final MijiaCoreApi mijiaCoreApi = new MijiaCoreApi();
+    public final MijiaApi mijiaApi = new MijiaApi();
 
     public class Account {
         public ServiceLoginData serviceLogin() throws BusinessException {
@@ -135,7 +135,7 @@ public class XiaomiClient {
         }
     }
 
-    public class MijiaCoreApi {
+    public class MijiaApi {
         private static final AtomicInteger id = new AtomicInteger();
 
         public List<DeviceData> deviceList() throws BusinessException {
@@ -147,7 +147,7 @@ public class XiaomiClient {
             deviceSearchParam.setGetCariotDevice(true);
             deviceSearchParam.setGetThirdDevice(true);
 
-            XiaomiRspV2<DeviceDataRsp> deviceList = mijiaCoreApiProxy.deviceList("core.", deviceSearchParam);
+            XiaomiRspV2<DeviceDataRsp> deviceList = mijiaCoreApiProxy.deviceList(deviceSearchParam);
             return deviceList.getResult().getList();
         }
 
@@ -166,7 +166,7 @@ public class XiaomiClient {
 
             deviceParam.setParams(statusList);
 
-            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod("", deviceModel, deviceId, deviceParam);
+            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod(deviceModel, deviceId, deviceParam);
 
             Map<String, String> resultMap = new TreeMap<>();
             for (int i = 0; i < statusList.size(); i++) {
@@ -184,7 +184,7 @@ public class XiaomiClient {
 
             deviceParam.setParams(statusList);
 
-            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod("", deviceModel, deviceId, deviceParam);
+            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod(deviceModel, deviceId, deviceParam);
 
             return deviceList.getResult().get(0);
         }
@@ -199,7 +199,7 @@ public class XiaomiClient {
 
             deviceParam.setParams(statusList);
 
-            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod("", deviceModel, deviceId, deviceParam);
+            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod(deviceModel, deviceId, deviceParam);
             return deviceList.getResult().get(0);
         }
 
@@ -229,7 +229,7 @@ public class XiaomiClient {
             specialHeader.setContentType(List.of("application/json"));
             deviceChatParam.setReqHeader(specialHeader);
 
-            XiaomiRspV2<DeviceChatRsp> deviceList = mijiaCoreApiProxy.getDeviceChatList("", deviceModel, deviceChatParam);
+            XiaomiRspV2<DeviceChatRsp> deviceList = mijiaCoreApiProxy.getDeviceChatList(deviceModel, deviceChatParam);
             return deviceList.getResult().getRet();
         }
     }
