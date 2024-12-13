@@ -175,15 +175,13 @@ public class XiaomiClient {
             return resultMap;
         }
 
-        public String setDeviceStatus(String deviceId, String deviceModel, YeelightProp methodName, String value) throws BusinessException {
+        public String setDeviceStatus(String deviceId, String deviceModel, YeelightProp prop, String value) throws BusinessException {
             DeviceStatusParam deviceParam = new DeviceStatusParam();
             deviceParam.setId(id.get());
-            deviceParam.setMethod("set_" + methodName);
-            List<Object> statusList = new ArrayList<>();
-            statusList.add(value);
-
-            deviceParam.setParams(statusList);
-
+            deviceParam.setMethod(prop.toString());
+            if (StringUtilPlus.isNotBlank(value)) {
+                deviceParam.setParams(List.of(value));
+            }
             XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod(deviceModel, deviceId, deviceParam);
 
             return deviceList.getResult().get(0);
@@ -196,6 +194,21 @@ public class XiaomiClient {
             List<Object> statusList = new ArrayList<>();
             statusList.add(chatContent);
             statusList.add(0);
+
+            deviceParam.setParams(statusList);
+
+            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod(deviceModel, deviceId, deviceParam);
+            return deviceList.getResult().get(0);
+        }
+
+        public String ttsWithDevice(String deviceId, String deviceModel, String ttsContent) throws BusinessException {
+            DeviceStatusParam deviceParam = new DeviceStatusParam();
+            deviceParam.setId(id.get());
+            deviceParam.setMethod("play_user_tts");
+            List<Object> statusList = new ArrayList<>();
+            statusList.add(ttsContent);
+            statusList.add(1);
+            statusList.add(1800);
 
             deviceParam.setParams(statusList);
 

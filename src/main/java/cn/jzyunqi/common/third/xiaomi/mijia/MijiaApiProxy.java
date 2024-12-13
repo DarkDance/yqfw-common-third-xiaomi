@@ -30,7 +30,7 @@ public interface MijiaApiProxy {
     @PostExchange(url = "https://core.api.mijia.tech/app/v2/home/device_list_page")
     XiaomiRspV2<DeviceDataRsp> deviceList(@RequestBody DeviceSearchParam deviceSearchParam) throws BusinessException;
 
-    //获取设备状态
+    //执行设备命令
     @PostExchange(url = "https://api.mijia.tech/app/home/rpc/{deviceId}")
     XiaomiRspV2<List<String>> executeDeviceMethod(@RequestHeader("miot-request-model") String model, @PathVariable String deviceId, @RequestBody DeviceStatusParam deviceStatusParam) throws BusinessException;
 
