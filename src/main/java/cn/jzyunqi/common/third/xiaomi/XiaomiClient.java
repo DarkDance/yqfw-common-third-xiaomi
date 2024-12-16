@@ -180,10 +180,15 @@ public class XiaomiClient {
             deviceParam.setId(id.get());
             deviceParam.setMethod(prop.toString());
             if (StringUtilPlus.isNotBlank(value)) {
-                deviceParam.setParams(List.of(value));
+                if (prop.getParamType() == Boolean.class) {
+                    deviceParam.setParams(List.of(Boolean.valueOf(value)));
+                } else if (prop.getParamType() == Integer.class) {
+                    deviceParam.setParams(List.of(Integer.valueOf(value)));
+                } else {
+                    deviceParam.setParams(List.of(value));
+                }
             }
             XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod(deviceModel, deviceId, deviceParam);
-
             return deviceList.getResult().get(0);
         }
 
