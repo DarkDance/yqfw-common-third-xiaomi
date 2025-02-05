@@ -23,7 +23,7 @@ public class EncryptDecryptUtils {
 
     public static String generateNonce(long timeDiff) {
         ByteBuffer buffer = ByteBuffer.allocate(12);
-        buffer.putLong(RandomUtilPlus.Number.nextLong());
+        buffer.putLong(RandomUtilPlus.Number.randomLong(0, Long.MAX_VALUE));
         buffer.putInt((int) ((System.currentTimeMillis() + timeDiff) / 60000));
         return String.valueOf(DigestUtilPlus.Base64.encodeBase64String(buffer.array()));
     }

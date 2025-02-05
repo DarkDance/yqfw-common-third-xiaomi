@@ -3,15 +3,13 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.2</version>
+        <groupId>cn.jzyunqi</groupId>
+        <artifactId>yqfw-common-third-parent</artifactId>
+        <version>0.0.5-SNAPSHOT</version>
     </parent>
-
-    <groupId>cn.jzyunqi</groupId>
-    <artifactId>yqfw-common-third-xiaomi</artifactId>
-    <version>0.0.5-SNAPSHOT</version>
     <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>yqfw-common-third-xiaomi</artifactId>
 
     <properties>
         <yqfw.version>0.0.5-SNAPSHOT</yqfw.version>
@@ -71,18 +69,4 @@
 
     </dependencies>
 
-    <repositories>
-        <repository>
-            <id>yqfw-repository</id>
-            <url>https://gitee.com/wiiyaya/maven-repository/raw/master</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-                <updatePolicy>daily</updatePolicy>
-                <checksumPolicy>warn</checksumPolicy>
-            </snapshots>
-        </repository>
-    </repositories>
 </project>
