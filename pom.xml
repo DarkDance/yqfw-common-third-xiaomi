@@ -12,8 +12,6 @@
     <artifactId>yqfw-common-third-xiaomi</artifactId>
 
     <properties>
-        <yqfw.version>0.0.5-SNAPSHOT</yqfw.version>
-        <commons-io.version>2.15.1</commons-io.version>
     </properties>
 
     <dependencies>
