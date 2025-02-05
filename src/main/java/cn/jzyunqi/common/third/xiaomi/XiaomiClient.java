@@ -69,6 +69,12 @@ public class XiaomiClient {
     public final MijiaApi mijiaApi = new MijiaApi();
 
     public class Account {
+        /**
+         * 登录小米账号
+         *
+         * @param xiaomiAccount 小米账号
+         * @return 登录结果
+         */
         public ServiceLoginData serviceLogin(String xiaomiAccount) throws BusinessException {
             XiaomiAuth auth = xiaomiAuthRepository.getXiaomiAuth(xiaomiAccount);
 
@@ -140,6 +146,12 @@ public class XiaomiClient {
     public class MijiaApi {
         private static final AtomicInteger id = new AtomicInteger();
 
+        /**
+         * 获取指定账号下的设备列表（需要先登录后才能获取）
+         *
+         * @param xiaomiAccount 小米账号
+         * @return 设备列表
+         */
         public List<DeviceData> deviceList(String xiaomiAccount) throws BusinessException {
             DeviceSearchParam deviceSearchParam = new DeviceSearchParam();
             deviceSearchParam.setGetVirtualModel(true);
@@ -153,6 +165,14 @@ public class XiaomiClient {
             return deviceList.getResult().getList();
         }
 
+        /**
+         * 获取设备各种属性
+         *
+         * @param xiaomiAccount 小米账号
+         * @param deviceId 设备id（从设备列表中获取）
+         * @param deviceModel 设备模型（从设备列表中获取）
+         * @return 设备当前各种状态
+         */
         public Map<String, String> getDeviceStatus(String xiaomiAccount, String deviceId, String deviceModel) throws BusinessException {
             DeviceStatusParam deviceParam = new DeviceStatusParam();
             deviceParam.setId(id.get());
@@ -177,6 +197,16 @@ public class XiaomiClient {
             return resultMap;
         }
 
+        /**
+         * 设置设备属性
+         *
+         * @param xiaomiAccount 小米账号
+         * @param deviceId 设备id（从设备列表中获取）
+         * @param deviceModel 设备模型（从设备列表中获取）
+         * @param prop 属性
+         * @param value 属性值
+         * @return 设置结果
+         */
         public String setDeviceStatus(String xiaomiAccount, String deviceId, String deviceModel, YeelightProp prop, String value) throws BusinessException {
             DeviceStatusParam deviceParam = new DeviceStatusParam();
             deviceParam.setId(id.get());
@@ -194,6 +224,15 @@ public class XiaomiClient {
             return deviceList.getResult().get(0);
         }
 
+        /**
+         * 与设备聊天
+         *
+         * @param xiaomiAccount 小米账号
+         * @param deviceId 设备id（从设备列表中获取）
+         * @param deviceModel 设备模型（从设备列表中获取）
+         * @param chatContent 聊天内容
+         * @return 方法调用结果
+         */
         public String chatWithDevice(String xiaomiAccount, String deviceId, String deviceModel, String chatContent) throws BusinessException {
             DeviceStatusParam deviceParam = new DeviceStatusParam();
             deviceParam.setId(id.get());
@@ -208,6 +247,15 @@ public class XiaomiClient {
             return deviceList.getResult().get(0);
         }
 
+        /**
+         * 让设备说话
+         *
+         * @param xiaomiAccount 小米账号
+         * @param deviceId 设备id（从设备列表中获取）
+         * @param deviceModel 设备模型（从设备列表中获取）
+         * @param ttsContent 说话内容
+         * @return 方法调用结果
+         */
         public String ttsWithDevice(String xiaomiAccount, String deviceId, String deviceModel, String ttsContent) throws BusinessException {
             DeviceStatusParam deviceParam = new DeviceStatusParam();
             deviceParam.setId(id.get());
@@ -223,6 +271,16 @@ public class XiaomiClient {
             return deviceList.getResult().get(0);
         }
 
+        /**
+         * 获取设备聊天记录
+         *
+         * @param xiaomiAccount 小米账号
+         * @param userId 用户id 登陆后获取
+         * @param deviceId 设备id（从设备列表中获取）
+         * @param deviceModel 设备模型（从设备列表中获取）
+         * @param clientId 暂不知道怎么来的
+         * @return 聊天记录
+         */
         public DeviceChatData getDeviceChatList(String xiaomiAccount, String userId, String deviceId, String deviceModel, String clientId) throws BusinessException {
             DeviceChatParam deviceChatParam = new DeviceChatParam();
             deviceChatParam.setPath("/api/aivs/device-events");

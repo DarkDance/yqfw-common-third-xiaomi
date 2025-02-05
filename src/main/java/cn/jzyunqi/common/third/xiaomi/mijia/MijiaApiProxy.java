@@ -29,13 +29,13 @@ public interface MijiaApiProxy {
 
     //获取设备列表
     @PostExchange(url = "https://core.api.mijia.tech/app/v2/home/device_list_page")
-    XiaomiRspV2<DeviceDataRsp> deviceList(@RequestAttribute("_$$account") String account, @RequestBody DeviceSearchParam deviceSearchParam) throws BusinessException;
+    XiaomiRspV2<DeviceDataRsp> deviceList(@RequestAttribute(value = "_$$account", required = false) String account, @RequestBody DeviceSearchParam deviceSearchParam) throws BusinessException;
 
     //执行设备命令
     @PostExchange(url = "https://api.mijia.tech/app/home/rpc/{deviceId}")
-    XiaomiRspV2<List<String>> executeDeviceMethod(@RequestAttribute("_$$account") String account, @RequestHeader("miot-request-model") String model, @PathVariable String deviceId, @RequestBody DeviceStatusParam deviceStatusParam) throws BusinessException;
+    XiaomiRspV2<List<String>> executeDeviceMethod(@RequestAttribute(value = "_$$account", required = false) String account, @RequestHeader("miot-request-model") String model, @PathVariable String deviceId, @RequestBody DeviceStatusParam deviceStatusParam) throws BusinessException;
 
     //获取设备对话列表
     @PostExchange(url = "https://api.mijia.tech/app/v2/api/aivs")
-    XiaomiRspV2<DeviceChatRsp> getDeviceChatList(@RequestAttribute("_$$account") String account, @RequestHeader("miot-request-model") String model, @RequestBody DeviceChatParam deviceChatParam) throws BusinessException;
+    XiaomiRspV2<DeviceChatRsp> getDeviceChatList(@RequestAttribute(value = "_$$account", required = false) String account, @RequestHeader("miot-request-model") String model, @RequestBody DeviceChatParam deviceChatParam) throws BusinessException;
 }

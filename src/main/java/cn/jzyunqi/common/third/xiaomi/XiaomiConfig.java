@@ -93,7 +93,7 @@ public class XiaomiConfig {
                                 MediaType.TEXT_PLAIN
                         )))
                 .filter((clientRequest, next) -> {
-                    String account = clientRequest.attribute("_$$account").orElse(xiaomiAuthRepository.getXiaomiAuth(null)).toString();
+                    String account = clientRequest.attribute("_$$account").orElse(xiaomiAuthRepository.getXiaomiAuth(null).getAccount()).toString();
                     UserTokenRedisDto userToken = (UserTokenRedisDto) redisHelper.vGet(XiaomiCache.THIRD_XIAOMI_ACCOUNT_V, account);
                     ServerTokenRedisDto mijiaToken = userToken.getServerTokenMap().get("mijia");
 
