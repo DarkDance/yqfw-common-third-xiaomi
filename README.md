@@ -16,13 +16,10 @@
 * 配置自己的小米账号
 ```java
 @Bean
-public XiaomiClientConfig xiaomiClientConfig() {
-    return new XiaomiClientConfig(
-            "xxxx",
-            "xxxx",
-            "xxxx",
-            "xxx",
-            "xxx"
+public XiaomiAuthRepository xiaomiAuthRepository() {
+    return () -> List.of(
+            new XiaomiAuth("account1", "password1"),
+            new XiaomiAuth("account2", "password2")
     );
 }
 ```

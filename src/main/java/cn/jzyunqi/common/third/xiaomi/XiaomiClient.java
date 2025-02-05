@@ -55,7 +55,7 @@ public class XiaomiClient {
     private AccountApiProxy accountApiProxy;
 
     @Resource
-    private XiaomiClientConfig xiaomiClientConfig;
+    private XiaomiAuthRepository xiaomiAuthRepository;
 
     @Resource
     private RedisHelper redisHelper;
@@ -69,9 +69,11 @@ public class XiaomiClient {
     public final MijiaApi mijiaApi = new MijiaApi();
 
     public class Account {
-        public ServiceLoginData serviceLogin() throws BusinessException {
+        public ServiceLoginData serviceLogin(String xiaomiAccount) throws BusinessException {
+            XiaomiAuth auth = xiaomiAuthRepository.getXiaomiAuth(xiaomiAccount);
+
             String serviceId = MiServer.mijia.getServiceId();
-            UserTokenRedisDto userTokenRedisDto = (UserTokenRedisDto) redisHelper.vGet(XiaomiCache.THIRD_XIAOMI_ACCOUNT_V, xiaomiClientConfig.getAccount());
+            UserTokenRedisDto userTokenRedisDto = (UserTokenRedisDto) redisHelper.vGet(XiaomiCache.THIRD_XIAOMI_ACCOUNT_V, auth.getAccount());
             if (userTokenRedisDto == null) {
                 userTokenRedisDto = new UserTokenRedisDto();
                 userTokenRedisDto.setServerTokenMap(new HashMap<>());
@@ -79,7 +81,7 @@ public class XiaomiClient {
             ServiceLoginData loginData;
             try {
                 if (userTokenRedisDto.getUserId() == null) {
-                    loginData = accountApiProxy.serviceLogin(xiaomiClientConfig.getAccount(), serviceId);
+                    loginData = accountApiProxy.serviceLogin(auth.getAccount(), serviceId);
                 } else {
                     loginData = accountApiProxy.serviceLogin(userTokenRedisDto.getUserId(), userTokenRedisDto.getPassToken(), serviceId);
                 }
@@ -89,14 +91,14 @@ public class XiaomiClient {
                         errorData.getQueryStr(),
                         errorData.getCallback(),
                         errorData.getSign(),
-                        xiaomiClientConfig.getAccount(),
-                        DigestUtilPlus.MD5.sign(xiaomiClientConfig.getPassword(), false).toUpperCase()
+                        auth.getAccount(),
+                        DigestUtilPlus.MD5.sign(auth.getPassword(), false).toUpperCase()
                 );
             }
             userTokenRedisDto.setUserId(loginData.getUserId());
             userTokenRedisDto.setEncryptedUserId(loginData.getEncryptedUserId());
             userTokenRedisDto.setPassToken(loginData.getPassToken());
-            redisHelper.vPut(XiaomiCache.THIRD_XIAOMI_ACCOUNT_V, xiaomiClientConfig.getAccount(), userTokenRedisDto);
+            redisHelper.vPut(XiaomiCache.THIRD_XIAOMI_ACCOUNT_V, auth.getAccount(), userTokenRedisDto);
 
             String needSign = "nonce=" + loginData.getNonce() + '&' + loginData.getServerSecurity();
             String sign = DigestUtilPlus.SHA.sign(needSign, DigestUtilPlus.SHAAlgo._1, true);
@@ -126,7 +128,7 @@ public class XiaomiClient {
                                 return serverTokenRedisDto;
                             }).ifPresent(serverTokenRedisDto -> {
                                 finalUserTokenRedisDto.getServerTokenMap().put(serviceId, serverTokenRedisDto);
-                                redisHelper.vPut(XiaomiCache.THIRD_XIAOMI_ACCOUNT_V, xiaomiClientConfig.getAccount(), finalUserTokenRedisDto);
+                                redisHelper.vPut(XiaomiCache.THIRD_XIAOMI_ACCOUNT_V, auth.getAccount(), finalUserTokenRedisDto);
                             });
                     ;
                 }
@@ -138,7 +140,7 @@ public class XiaomiClient {
     public class MijiaApi {
         private static final AtomicInteger id = new AtomicInteger();
 
-        public List<DeviceData> deviceList() throws BusinessException {
+        public List<DeviceData> deviceList(String xiaomiAccount) throws BusinessException {
             DeviceSearchParam deviceSearchParam = new DeviceSearchParam();
             deviceSearchParam.setGetVirtualModel(true);
             deviceSearchParam.setGetHuamiDevices(1);
@@ -147,11 +149,11 @@ public class XiaomiClient {
             deviceSearchParam.setGetCariotDevice(true);
             deviceSearchParam.setGetThirdDevice(true);
 
-            XiaomiRspV2<DeviceDataRsp> deviceList = mijiaCoreApiProxy.deviceList(deviceSearchParam);
+            XiaomiRspV2<DeviceDataRsp> deviceList = mijiaCoreApiProxy.deviceList(xiaomiAccount, deviceSearchParam);
             return deviceList.getResult().getList();
         }
 
-        public Map<String, String> getDeviceStatus(String deviceId, String deviceModel) throws BusinessException {
+        public Map<String, String> getDeviceStatus(String xiaomiAccount, String deviceId, String deviceModel) throws BusinessException {
             DeviceStatusParam deviceParam = new DeviceStatusParam();
             deviceParam.setId(id.get());
             deviceParam.setMethod("get_prop");
@@ -166,7 +168,7 @@ public class XiaomiClient {
 
             deviceParam.setParams(statusList);
 
-            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod(deviceModel, deviceId, deviceParam);
+            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod(xiaomiAccount, deviceModel, deviceId, deviceParam);
 
             Map<String, String> resultMap = new TreeMap<>();
             for (int i = 0; i < statusList.size(); i++) {
@@ -175,7 +177,7 @@ public class XiaomiClient {
             return resultMap;
         }
 
-        public String setDeviceStatus(String deviceId, String deviceModel, YeelightProp prop, String value) throws BusinessException {
+        public String setDeviceStatus(String xiaomiAccount, String deviceId, String deviceModel, YeelightProp prop, String value) throws BusinessException {
             DeviceStatusParam deviceParam = new DeviceStatusParam();
             deviceParam.setId(id.get());
             deviceParam.setMethod(prop.toString());
@@ -188,11 +190,11 @@ public class XiaomiClient {
                     deviceParam.setParams(List.of(value));
                 }
             }
-            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod(deviceModel, deviceId, deviceParam);
+            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod(xiaomiAccount, deviceModel, deviceId, deviceParam);
             return deviceList.getResult().get(0);
         }
 
-        public String chatWithDevice(String deviceId, String deviceModel, String chatContent) throws BusinessException {
+        public String chatWithDevice(String xiaomiAccount, String deviceId, String deviceModel, String chatContent) throws BusinessException {
             DeviceStatusParam deviceParam = new DeviceStatusParam();
             deviceParam.setId(id.get());
             deviceParam.setMethod("start_user_nlp");
@@ -202,11 +204,11 @@ public class XiaomiClient {
 
             deviceParam.setParams(statusList);
 
-            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod(deviceModel, deviceId, deviceParam);
+            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod(xiaomiAccount, deviceModel, deviceId, deviceParam);
             return deviceList.getResult().get(0);
         }
 
-        public String ttsWithDevice(String deviceId, String deviceModel, String ttsContent) throws BusinessException {
+        public String ttsWithDevice(String xiaomiAccount, String deviceId, String deviceModel, String ttsContent) throws BusinessException {
             DeviceStatusParam deviceParam = new DeviceStatusParam();
             deviceParam.setId(id.get());
             deviceParam.setMethod("play_user_tts");
@@ -217,11 +219,11 @@ public class XiaomiClient {
 
             deviceParam.setParams(statusList);
 
-            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod(deviceModel, deviceId, deviceParam);
+            XiaomiRspV2<List<String>> deviceList = mijiaCoreApiProxy.executeDeviceMethod(xiaomiAccount, deviceModel, deviceId, deviceParam);
             return deviceList.getResult().get(0);
         }
 
-        public DeviceChatData getDeviceChatList(String userId, String deviceId, String deviceModel, String clientId) throws BusinessException {
+        public DeviceChatData getDeviceChatList(String xiaomiAccount, String userId, String deviceId, String deviceModel, String clientId) throws BusinessException {
             DeviceChatParam deviceChatParam = new DeviceChatParam();
             deviceChatParam.setPath("/api/aivs/device-events");
             deviceChatParam.setMethod("POST");
@@ -247,7 +249,7 @@ public class XiaomiClient {
             specialHeader.setContentType(List.of("application/json"));
             deviceChatParam.setReqHeader(specialHeader);
 
-            XiaomiRspV2<DeviceChatRsp> deviceList = mijiaCoreApiProxy.getDeviceChatList(deviceModel, deviceChatParam);
+            XiaomiRspV2<DeviceChatRsp> deviceList = mijiaCoreApiProxy.getDeviceChatList(xiaomiAccount, deviceModel, deviceChatParam);
             return deviceList.getResult().getRet();
         }
     }

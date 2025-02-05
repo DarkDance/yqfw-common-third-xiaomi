@@ -82,7 +82,7 @@ public class XiaomiConfig {
     }
 
     @Bean
-    public MijiaApiProxy mijiaApiProxy(WebClient.Builder webClientBuilder, XiaomiClientConfig xiaomiClientConfig, RedisHelper redisHelper, Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder) {
+    public MijiaApiProxy mijiaApiProxy(WebClient.Builder webClientBuilder, XiaomiAuthRepository xiaomiAuthRepository, RedisHelper redisHelper, Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder) {
         WebClient webClient = webClientBuilder.clone()
                 .codecs(configurer -> configurer
                         .defaultCodecs()
@@ -93,7 +93,8 @@ public class XiaomiConfig {
                                 MediaType.TEXT_PLAIN
                         )))
                 .filter((clientRequest, next) -> {
-                    UserTokenRedisDto userToken = (UserTokenRedisDto) redisHelper.vGet(XiaomiCache.THIRD_XIAOMI_ACCOUNT_V, xiaomiClientConfig.getAccount());
+                    String account = clientRequest.attribute("_$$account").orElse(xiaomiAuthRepository.getXiaomiAuth(null)).toString();
+                    UserTokenRedisDto userToken = (UserTokenRedisDto) redisHelper.vGet(XiaomiCache.THIRD_XIAOMI_ACCOUNT_V, account);
                     ServerTokenRedisDto mijiaToken = userToken.getServerTokenMap().get("mijia");
 
                     String method = clientRequest.method().toString();
