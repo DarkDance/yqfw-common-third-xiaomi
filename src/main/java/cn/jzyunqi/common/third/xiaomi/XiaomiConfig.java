@@ -19,8 +19,7 @@ import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ClientHttpRequestDecorator;
-import org.springframework.http.codec.json.Jackson2JsonDecoder;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.http.codec.json.JacksonJsonDecoder;
 import org.springframework.lang.NonNull;
 import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
@@ -28,6 +27,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.support.WebClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 import reactor.core.publisher.Mono;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -82,11 +82,11 @@ public class XiaomiConfig {
     }
 
     @Bean
-    public MijiaApiProxy mijiaApiProxy(WebClient.Builder webClientBuilder, XiaomiAuthRepository xiaomiAuthRepository, RedisHelper redisHelper, Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder) {
+    public MijiaApiProxy mijiaApiProxy(WebClient.Builder webClientBuilder, XiaomiAuthRepository xiaomiAuthRepository, RedisHelper redisHelper) {
         WebClient webClient = webClientBuilder.clone()
                 .codecs(configurer -> configurer
                         .defaultCodecs()
-                        .jackson2JsonDecoder(new Jackson2JsonDecoder(jackson2ObjectMapperBuilder.build(),
+                        .jacksonJsonDecoder(new JacksonJsonDecoder(JsonMapper.builder().build(),
                                 MediaType.APPLICATION_JSON,
                                 new MediaType("application", "*+json"),
                                 MediaType.APPLICATION_NDJSON,
