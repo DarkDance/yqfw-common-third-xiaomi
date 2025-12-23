@@ -10,7 +10,6 @@ import cn.jzyunqi.common.third.xiaomi.mijia.MijiaApiProxy;
 import cn.jzyunqi.common.third.xiaomi.mijia.utils.EncryptDecryptUtils;
 import cn.jzyunqi.common.utils.CollectionUtilPlus;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
 import org.reactivestreams.Publisher;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -117,7 +116,7 @@ public class XiaomiConfig {
                                     .body()
                                     .insert(new ClientHttpRequestDecorator(outputMessage) {
                                         @Override
-                                        public @NonNull Mono<Void> writeWith(@NonNull Publisher<? extends DataBuffer> body) {
+                                        public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
                                             //只能在这里将请求改成form-data格式，否则body会使用这个格式来编码，导致格式错误，比如原请求为JSON格式
                                             getHeaders().setContentType(MediaType.APPLICATION_FORM_URLENCODED);
                                             return super.writeWith(DataBufferUtils.join(body).map(dataBuffer -> {
