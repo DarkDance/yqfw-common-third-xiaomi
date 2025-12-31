@@ -34,7 +34,7 @@ public class XiaomiHttpExchangeWrapper {
             resultObj = proceedingJoinPoint.proceed();
         } catch (Throwable e) {
             log.debug("======xiaomiHttpExchange[{}] internal exception=======", proceedingJoinPoint.getSignature().getName());
-            throw new BusinessException("common_error_xiaomi_http_exchange_error", e);
+            throw new BusinessException(e, "common_error_xiaomi_http_exchange_error");
         }
         if (resultObj instanceof XiaomiRspV1 xiaomiRsp) {
             if (StringUtilPlus.isNotBlank(xiaomiRsp.getCode()) && !"0".equals(xiaomiRsp.getCode())) {
