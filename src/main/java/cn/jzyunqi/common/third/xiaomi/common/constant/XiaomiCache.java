@@ -1,6 +1,6 @@
 package cn.jzyunqi.common.third.xiaomi.common.constant;
 
-import cn.jzyunqi.common.feature.redis.Cache;
+import cn.jzyunqi.common.support.spring.redis.Cache;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

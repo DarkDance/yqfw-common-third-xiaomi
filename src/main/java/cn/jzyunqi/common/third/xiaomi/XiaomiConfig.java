@@ -1,6 +1,6 @@
 package cn.jzyunqi.common.third.xiaomi;
 
-import cn.jzyunqi.common.feature.redis.RedisHelper;
+import cn.jzyunqi.common.support.spring.redis.RedisHelper;
 import cn.jzyunqi.common.third.xiaomi.account.AccountApiProxy;
 import cn.jzyunqi.common.third.xiaomi.account.model.ServerTokenRedisDto;
 import cn.jzyunqi.common.third.xiaomi.account.model.UserTokenRedisDto;
