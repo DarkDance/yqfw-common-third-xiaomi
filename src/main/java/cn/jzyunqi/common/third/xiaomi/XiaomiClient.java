@@ -79,7 +79,7 @@ public class XiaomiClient {
             XiaomiAuth auth = xiaomiAuthRepository.getXiaomiAuth(xiaomiAccount);
 
             String serviceId = MiServer.mijia.getServiceId();
-            UserTokenRedisDto userTokenRedisDto = (UserTokenRedisDto) redisHelper.vGet(XiaomiCache.THIRD_XIAOMI_ACCOUNT_V, auth.getAccount());
+            UserTokenRedisDto userTokenRedisDto = redisHelper.vGet(XiaomiCache.THIRD_XIAOMI_ACCOUNT_V, auth.getAccount());
             if (userTokenRedisDto == null) {
                 userTokenRedisDto = new UserTokenRedisDto();
                 userTokenRedisDto.setServerTokenMap(new HashMap<>());
